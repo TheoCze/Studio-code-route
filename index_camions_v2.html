@@ -1,0 +1,45 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>Épisode pilote — Dépassement en montée</title><style>*{box-sizing:border-box}body{margin:0;background:#111b25;color:white;font-family:system-ui,-apple-system,sans-serif}header{padding:12px 15px;background:#172638}h1{font-size:17px;margin:0 0 4px}small{color:#b8cad9}#view{width:100%;height:min(69dvh,760px);display:block;touch-action:none}#bar{padding:12px 14px;background:#172638;display:flex;gap:9px;align-items:center;flex-wrap:wrap}button{border:0;border-radius:10px;padding:11px 15px;background:#2d8bf0;color:white;font-weight:700;font-size:14px;cursor:pointer}button.secondary{background:#42586d}#time{font-variant-numeric:tabular-nums;margin-left:auto}#caption{min-height:58px;padding:14px;font-size:17px;font-weight:650;text-align:center;background:#23374b}#error{color:#ffb1b1;padding:8px 14px;display:none}#timeline{height:5px;background:#4b6072}#progress{height:100%;width:0;background:#f7c451}</style></head><body><header><h1>Épisode pilote 01 — Le dépassement interminable</h1><small>V1 • Animation 3D • Caméra orientable • Vue vidéo • 36 secondes</small></header><div id="view"></div><div style="padding:7px 12px;text-align:center;color:#c9d9e8;background:#172638;font-size:12px">Glisser pour tourner · Pincer pour zoomer · « Vue vidéo » pour recentrer</div><div id="timeline"><div id="progress"></div></div><div id="caption">Appuie sur « Lancer la scène »</div><div id="error"></div><div id="bar"><button id="play">▶ Lancer la scène</button><button id="reset" class="secondary">↺ Rejouer</button><button id="video" class="secondary">◎ Vue vidéo</button><span id="time">00:00 / 00:36</span></div><script type="module">
+import * as THREE from 'https://esm.sh/three@0.160.1';
+const host=document.getElementById('view'), err=document.getElementById('error'),caption=document.getElementById('caption'),progress=document.getElementById('progress'),timeEl=document.getElementById('time');
+try{
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x93c9ee);scene.fog=new THREE.Fog(0x93c9ee,105,270);
+const camera=new THREE.PerspectiveCamera(53,1,.1,500);
+const target=new THREE.Vector3(0,2,27);
+let yaw=0,pitch=.28,distance=72;
+function updateCamera(){const horizontal=distance*Math.cos(pitch);camera.position.set(target.x+Math.sin(yaw)*horizontal,target.y+Math.sin(pitch)*distance,target.z-Math.cos(yaw)*horizontal);camera.lookAt(target)}
+function resetCamera(){yaw=0;pitch=.28;distance=72;updateCamera()}
+resetCamera();
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'low-power'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;host.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x73935d,2));const sun=new THREE.DirectionalLight(0xfff1d3,2.2);sun.position.set(-25,65,-15);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-85;sun.shadow.camera.right=85;sun.shadow.camera.top=120;sun.shadow.camera.bottom=-85;scene.add(sun);
+const mat=(color,roughness=.85)=>new THREE.MeshStandardMaterial({color,roughness});const grass=mat(0x75ad59),roadMat=mat(0x454b50),lineMat=mat(0xfff6dc),white=mat(0xe7e8e3),dark=mat(0x28323c),glass=mat(0x7da6bb,.3),wheel=mat(0x1d2328),red=mat(0xd94a38),blue=mat(0x2171ae),yellow=mat(0xe3b848),green=mat(0x39824c);
+function box(parent,w,h,d,m,x,y,z){let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
+function sphere(parent,r,m,x,y,z){let o=new THREE.Mesh(new THREE.IcosahedronGeometry(r,1),m);o.position.set(x,y,z);o.castShadow=true;parent.add(o);return o}
+// Road slopes gently uphill in the distance; vehicle positions use matching elevation.
+function elev(z){return z*.026}
+let terrain=box(scene,220,1,340,grass,0,-.65,67);terrain.rotation.x=-.026;
+let road=box(scene,17,.12,285,roadMat,0,0,73);road.rotation.x=-.026;
+for(let z=-55;z<205;z+=12){let y=elev(z)+.1;box(scene,.17,.05,5,lineMat,0,y,z)}
+for(let x of [-8.2,8.2])box(scene,.19,.07,285,lineMat,x,.12,73).rotation.x=-.026;
+for(let z=-40;z<185;z+=16){for(let side of [-1,1]){let x=side*(14+(Math.abs(Math.sin(z*.11))*7));let trunk=mat(0x725038);box(scene,.65,4,.65,trunk,x,elev(z)+2,z);sphere(scene,2.7+(Math.abs(Math.sin(z))*.6),green,x,elev(z)+5,z);}}
+function wheels(g,positions,r=.7){for(const [x,z] of positions){let o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,.34,12),wheel);o.rotation.z=Math.PI/2;o.position.set(x,.72,z);g.add(o)}}
+function truck(color){let g=new THREE.Group();box(g,3.55,3.8,8.5,white,0,3.3,1.6);box(g,3.4,3.15,2.9,color,0,2.75,-4.05);box(g,3.12,1.35,.1,glass,0,3.4,-5.55);box(g,3.65,.35,12,dark,0,1.03,-.5);wheels(g,[[-1.82,-4],[-1.82,2],[-1.82,4],[1.82,-4],[1.82,2],[1.82,4]],.85);box(g,1.1,.25,.2,yellow,-1.05,1.45,-5.65);box(g,1.1,.25,.2,yellow,1.05,1.45,-5.65);scene.add(g);return g}
+function car(color){let g=new THREE.Group();box(g,2.4,.85,4.3,color,0,1.1,0);box(g,2.05,.85,2.35,color,0,1.85,-.18);box(g,1.92,.48,.09,glass,0,1.85,-1.4);box(g,1.92,.48,.09,glass,0,1.85,1.04);wheels(g,[[-1.24,-1.38],[-1.24,1.36],[1.24,-1.38],[1.24,1.36]],.5);box(g,.62,.25,.12,yellow,-.77,1.02,-2.19);box(g,.62,.25,.12,yellow,.77,1.02,-2.19);scene.add(g);return g}
+const slow=truck(blue),passing=truck(red),driver=car(yellow),other=car(white);
+function lerp(a,b,t){return a+(b-a)*Math.max(0,Math.min(1,t))}function smooth(a,b,t){let v=Math.max(0,Math.min(1,(t-a)/(b-a)));return v*v*(3-2*v)}
+function place(obj,x,z){obj.position.set(x,elev(z),z)}
+const D=36;let t=0,playing=false,last=0;
+function update(t){let p=t/D;let base=lerp(15,90,p);place(slow,4.1,base+4);let passZ=base+lerp(-13,18,smooth(1,25,t));let passX=lerp(-4.1,4.1,smooth(24,29,t));place(passing,passX,passZ);let carZ=base-lerp(29,20,smooth(0,25,t));if(t>29)carZ+=Math.pow((t-29)/7,2)*23;place(driver,-4.1,carZ);place(other,-4.1,base+lerp(37,16,smooth(25,35,t)));other.visible=t>=26;let hit=t>=34.4; if(hit){place(driver,-4.1,other.position.z-4.8);driver.rotation.y=.05*Math.sin(t*15)}else driver.rotation.y=0;
+let txt=t<3?'Que se passe-t-il quand un camion dépasse en montée ?':t<10?'Deux camions avancent presque à la même vitesse…':t<19?'Le dépassement dure. La voiture derrière doit patienter.':t<26?'Le camion gagne enfin quelques mètres.':t<30?'Il se rabat. La voie de gauche se libère.':t<34.4?'La voiture accélère trop vite… et un obstacle apparaît !':'Collision simulée : accélérer sans visibilité peut être dangereux.';caption.textContent=txt;progress.style.width=(p*100)+'%';timeEl.textContent='00:'+String(Math.floor(t)).padStart(2,'0')+' / 00:36'}
+// Pointer controls work with iPhone Safari and desktop mouse.
+const active=new Map();let pinchDist=0;
+const canvas=renderer.domElement;canvas.style.touchAction='none';
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);active.set(e.pointerId,{x:e.clientX,y:e.clientY});pinchDist=0});
+canvas.addEventListener('pointermove',e=>{if(!active.has(e.pointerId))return;const old=active.get(e.pointerId);active.set(e.pointerId,{x:e.clientX,y:e.clientY});const pts=[...active.values()];if(pts.length===1){yaw-=(e.clientX-old.x)*.007;pitch=Math.max(.10,Math.min(1.25,pitch+(e.clientY-old.y)*.005));}else if(pts.length===2){let d=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);if(pinchDist)distance=Math.max(27,Math.min(155,distance*pinchDist/d));pinchDist=d;}updateCamera()});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(type,e=>{active.delete(e.pointerId);pinchDist=0});
+canvas.addEventListener('wheel',e=>{e.preventDefault();distance=Math.max(27,Math.min(155,distance*(e.deltaY>0?1.09:.91)));updateCamera()},{passive:false});
+document.getElementById('video').onclick=resetCamera;
+function resize(){let w=host.clientWidth,h=host.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false)}addEventListener('resize',resize);resize();update(0);renderer.render(scene,camera);
+function frame(ms){if(!last)last=ms;let dt=Math.min((ms-last)/1000,.08);last=ms;if(playing){t=Math.min(D,t+dt);update(t);if(t===D){playing=false;document.getElementById('play').textContent='▶ Rejouer'}}renderer.render(scene,camera);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+document.getElementById('play').onclick=()=>{if(t>=D)t=0;playing=!playing;document.getElementById('play').textContent=playing?'Ⅱ Pause':'▶ Continuer';last=0};document.getElementById('reset').onclick=()=>{t=0;playing=false;update(t);document.getElementById('play').textContent='▶ Lancer la scène'};
+}catch(e){err.style.display='block';err.textContent='Erreur 3D : '+e.message;console.error(e)}
+</script></body></html>
